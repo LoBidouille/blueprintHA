@@ -1,0 +1,245 @@
+blueprint:
+  name: Gestion Thermique Clim
+  description: Programme le chauffage de vos climatisations avec des horaires et températures différentes pour la semaine et le week-end.
+  domain: automation
+  input:
+    climate_entity:
+      name: Climatisation
+      description: L'entité de la climatisation à piloter.
+      selector:
+        entity:
+          domain: climate
+    
+    # CONFIGURATION LUNDI-VENDREDI
+    wd_h1:
+      name: "Lundi-Vendredi : Heure 1 (Matin)"
+      default: "05:00:00"
+      selector:
+        time: {}
+    wd_t1:
+      name: "Lundi-Vendredi : Température 1"
+      default: 21
+      selector:
+        number:
+          min: 10
+          max: 30
+          step: 0.5
+    wd_h2:
+      name: "Lundi-Vendredi : Heure 2 (Départ)"
+      default: "08:00:00"
+      selector:
+        time: {}
+    wd_t2:
+      name: "Lundi-Vendredi : Température 2 (Éco)"
+      default: 16
+      selector:
+        number:
+          min: 10
+          max: 30
+          step: 0.5
+    wd_h3:
+      name: "Lundi-Vendredi : Heure 3 (Retour)"
+      default: "16:00:00"
+      selector:
+        time: {}
+    wd_t3:
+      name: "Lundi-Vendredi : Température 3"
+      default: 21
+      selector:
+        number:
+          min: 10
+          max: 30
+          step: 0.5
+    wd_h4:
+      name: "Lundi-Vendredi : Heure 4 (Nuit)"
+      default: "23:30:00"
+      selector:
+        time: {}
+    wd_t4:
+      name: "Lundi-Vendredi : Température 4"
+      default: 20
+      selector:
+        number:
+          min: 10
+          max: 30
+          step: 0.5
+
+    # CONFIGURATION WEEK-END
+    we_h1:
+      name: "Week-end : Heure 1"
+      default: "08:00:00"
+      selector:
+        time: {}
+    we_t1:
+      name: "Week-end : Température 1"
+      default: 21
+      selector:
+        number:
+          min: 10
+          max: 30
+          step: 0.5
+    we_h2:
+      name: "Week-end : Heure 2"
+      default: "12:00:00"
+      selector:
+        time: {}
+    we_t2:
+      name: "Week-end : Température 2"
+      default: 21
+      selector:
+        number:
+          min: 10
+          max: 30
+          step: 0.5
+    we_h3:
+      name: "Week-end : Heure 3"
+      default: "18:00:00"
+      selector:
+        time: {}
+    we_t3:
+      name: "Week-end : Température 3"
+      default: 21
+      selector:
+        number:
+          min: 10
+          max: 30
+          step: 0.5
+    we_h4:
+      name: "Week-end : Heure 4"
+      default: "23:30:00"
+      selector:
+        time: {}
+    we_t4:
+      name: "Week-end : Température 4"
+      default: 20
+      selector:
+        number:
+          min: 10
+          max: 30
+          step: 0.5
+
+mode: restart
+
+trigger:
+  - platform: time
+    id: "wd1"
+    at: !input wd_h1
+  - platform: time
+    id: "wd2"
+    at: !input wd_h2
+  - platform: time
+    id: "wd3"
+    at: !input wd_h3
+  - platform: time
+    id: "wd4"
+    at: !input wd_h4
+  - platform: time
+    id: "we1"
+    at: !input we_h1
+  - platform: time
+    id: "we2"
+    at: !input we_h2
+  - platform: time
+    id: "we3"
+    at: !input we_h3
+  - platform: time
+    id: "we4"
+    at: !input we_h4
+
+action:
+  - choose:
+      # LOGIQUE SEMAINE (Lundi=1, Vendredi=5)
+      - conditions:
+          - condition: template
+            value_template: "{{ now().isoweekday() <= 5 }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: trigger
+                    id: "wd1"
+                sequence:
+                  - service: climate.set_hvac_mode
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      hvac_mode: heat
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      temperature: !input wd_t1
+              - conditions:
+                  - condition: trigger
+                    id: "wd2"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      temperature: !input wd_t2
+              - conditions:
+                  - condition: trigger
+                    id: "wd3"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      temperature: !input wd_t3
+              - conditions:
+                  - condition: trigger
+                    id: "wd4"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      temperature: !input wd_t4
+
+      # LOGIQUE WEEK-END (Samedi=6, Dimanche=7)
+      - conditions:
+          - condition: template
+            value_template: "{{ now().isoweekday() > 5 }}"
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: trigger
+                    id: "we1"
+                sequence:
+                  - service: climate.set_hvac_mode
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      hvac_mode: heat
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      temperature: !input we_t1
+              - conditions:
+                  - condition: trigger
+                    id: "we2"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      temperature: !input we_t2
+              - conditions:
+                  - condition: trigger
+                    id: "we3"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      temperature: !input we_t3
+              - conditions:
+                  - condition: trigger
+                    id: "we4"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input climate_entity
+                    data:
+                      temperature: !input we_t4
