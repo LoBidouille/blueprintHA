@@ -1,0 +1,431 @@
+---
+###
+# Blueprint: Gestion Thermique Clim
+# Description: Programme automatique de gestion des climatiseurs
+#              avec horaires et températures différents pour la semaine et le week-end.
+#
+# Instructions d'utilisation :
+# 1. Installer ce blueprint depuis Home Assistant > Automations > Blueprints
+# 2. Créer une automatisation basée sur ce blueprint pour chaque climatisation
+# 3. Ajuster les horaires et températures selon vos besoins
+###
+
+blueprint:
+  name: "Gestion Thermique Clim"
+  domain: automation
+  input:
+    clim_entity:
+      name: "Climatisation"
+      description: >
+        Entité de la climatisation à piloter.
+        Exemple: climate.salon, climate.chambre_dortoir
+      selector:
+        entity:
+          domain: climate
+
+    mode_clim:
+      name: "Mode par défaut"
+      description: "Mode HVAC utilisé pour le chauffage (heat) ou la climatisation (cool)."
+      default: "heat"
+      selector:
+        select:
+          options:
+            - label: Chauffage
+              value: "heat"
+            - label: Refroidissement
+              value: "cool"
+
+    nom_clim:
+      name: "Nom de cette climatisation"
+      description: >
+        Un nom pour identifier facilement cet automate dans l'historique.
+        Exemple: Salon, Chambre parentale
+      default: "Salon"
+      selector:
+        text:
+
+    # ========== HEURES & TEMPÉRATURES SEMAINE (Lundi-Vendredi) ==========
+    wd_h1:
+      name: "Semaine - Heure 1"
+      description: >
+        Exemple : 05:00. Déclenchement du confort au réveil.
+      default: "05:00:00"
+      selector:
+        time: {}
+
+    wd_t_confort:
+      name: "Semaine - Température Confort (1)"
+      description: >
+        Température au r éveil en semaine. Exemple: 21°C
+      default: 21.0
+      selector:
+        number:
+          min: 5.0
+          max: 35.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    wd_h2:
+      name: "Semaine - Heure 2"
+      description: >
+        Exemple : 08:00. Passage en mode économique au départ.
+      default: "08:00:00"
+      selector:
+        time: {}
+
+    wd_t_eco:
+      name: "Semaine - Température Éco (2)"
+      description: >
+        Température économique pour économiser l'énergie. Exemple: 16°C
+      default: 16.0
+      selector:
+        number:
+          min: 5.0
+          max: 35.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    wd_h3:
+      name: "Semaine - Heure 3"
+      description: >
+        Exemple : 16:00. Retour à la maison, confort rétabli.
+      default: "16:00:00"
+      selector:
+        time: {}
+
+    wd_t_confort_pm:
+      name: "Semaine - Température Confort (3)"
+      description: >
+        Température de l'après-midi en semaine. Exemple: 21°C
+      default: 21.0
+      selector:
+        number:
+          min: 5.0
+          max: 35.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    wd_h4:
+      name: "Semaine - Heure 4"
+      description: >
+        Exemple : 23:30. Température de nuit pour bien dormir.
+      default: "23:30:00"
+      selector:
+        time: {}
+
+    wd_t_nuit:
+      name: "Semaine - Température Nuit (4)"
+      description: >
+        Température recommandée pour la nuit. Exemple: 20°C
+      default: 20.0
+      selector:
+        number:
+          min: 5.0
+          max: 35.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    # ========== HEURES & TEMPÉRATURES WEEK-END (Samedi-Dimanche) ==========
+    we_h1:
+      name: "Week-end - Heure 1"
+      description: >
+        Exemple : 08:00. Confort au réveil le week-end.
+      default: "08:00:00"
+      selector:
+        time: {}
+
+    we_t_confort:
+      name: "Week-end - Température Confort (1)"
+      description: >
+        Température de confort le matin de week-end. Exemple: 22°C
+      default: 22.0
+      selector:
+        number:
+          min: 5.0
+          max: 35.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    we_h2:
+      name: "Week-end - Heure 2"
+      description: >
+        Exemple : 11:00. Passage en mode économe pendant l'absence.
+      default: "11:00:00"
+      selector:
+        time: {}
+
+    we_t_eco:
+      name: "Week-end - Température Éco (2)"
+      description: >
+        Température économique le week-end en journée. Exemple: 17°C
+      default: 17.0
+      selector:
+        number:
+          min: 5.0
+          max: 35.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    we_h3:
+      name: "Week-end - Heure 3"
+      description: >
+        Exemple : 17:00. Confort du soir au retour à la maison.
+      default: "17:00:00"
+      selector:
+        time: {}
+
+    we_t_confort_pm:
+      name: "Week-end - Température Confort (3)"
+      description: >
+        Température de confort l'après-midi du week-end. Exemple: 22°C
+      default: 22.0
+      selector:
+        number:
+          min: 5.0
+          max: 35.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    we_h4:
+      name: "Week-end - Heure 4"
+      description: >
+        Exemple : 23:00. Température de nuit le week-end.
+      default: "23:00:00"
+      selector:
+        time: {}
+
+    we_t_nuit:
+      name: "Week-end - Température Nuit (4)"
+      description: >
+        Température recommandée pour la nuit le week-end. Exemple: 19°C
+      default: 19.0
+      selector:
+        number:
+          min: 5.0
+          max: 35.0
+          step: 0.5
+          unit_of_measurement: "°C"
+
+    # ========== OPTIONS AVANCÉES ==========
+    log_actions:
+      name: "Journaliser les actions"
+      description: >
+        Activer la journalisation automatique des changements de température
+        dans l'historique Home Assistant. Utile pour vérifier le bon fonctionnement.
+      default: true
+      selector:
+        boolean: {}
+
+    max_retries:
+      name: "Nombre maximum de tentatives"
+      description: >
+        Tentatives en cas d'échec de communication avec la climatisation.
+      default: 3
+      selector:
+        number:
+          min: 0
+          max: 5
+          step: 1
+
+mode: trigger
+
+trigger:
+  # ===== Déclencheurs pour la Semaine (Lundi à Vendredi) =====
+  - platform: time
+    id: "wd_h1"
+    at: !input wd_h1
+  - platform: time
+    id: "wd_h2"
+    at: !input wd_h2
+  - platform: time
+    id: "wd_h3"
+    at: !input wd_h3
+  - platform: time
+    id: "wd_h4"
+    at: !input wd_h4
+
+  # ===== Déclencheurs pour le Week-end (Samedi et Dimanche) =====
+  - platform: time
+    id: "we_h1"
+    at: !input we_h1
+  - platform: time
+    id: "we_h2"
+    at: !input we_h2
+  - platform: time
+    id: "we_h3"
+    at: !input we_h3
+  - platform: time
+    id: "we_h4"
+    at: !input we_h4
+
+condition: []
+
+action:
+  # --- Détection du type de jour ---
+  - choose:
+      # === Jour de Semaine (Lundi = 1 ... Vendredi = 5) ===
+      - conditions:
+          - condition: template
+            value_template: "{{ now().isoweekday() <= 5 }}"
+        sequence:
+          - choose:
+              # Heure 1: Matin Confort au réveil
+              - conditions:
+                  - condition: trigger
+                    id: "wd_h1"
+                sequence:
+                  - service: climate.set_hvac_mode
+                    target:
+                      entity_id: !input clim_entity
+                    data:
+                      hvac_mode: !input mode_clim
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input clim_entity
+                    data:
+                      temperature: 21.0
+                  - if: !input log_actions
+                    then:
+                      - service: logbook.log
+                        data:
+                          message: >
+                            Réveil - Température Confort à {{ 21 }}°C
+                            (Mode {{ !input mode_clim | upper }})
+                          name: "Clim Salon"
+
+              # Heure 2: Éco pendant la journée
+              - conditions:
+                  - condition: trigger
+                    id: "wd_h2"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input clim_entity
+                    data:
+                      temperature: 16.0
+                  - if: !input log_actions
+                    then:
+                      - service: logbook.log
+                        data:
+                          message: >
+                            Mode Éco à {{ 16 }}°C
+                          name: "Clim Salon"
+
+              # Heure 3: Confort Après-midi retour à la maison
+              - conditions:
+                  - condition: trigger
+                    id: "wd_h3"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input clim_entity
+                    data:
+                      temperature: 21.0
+                  - if: !input log_actions
+                    then:
+                      - service: logbook.log
+                        data:
+                          message: >
+                            Retour Maison - Confort après-midi à {{ 21 }}°C
+                          name: "Clim Salon"
+
+              # Heure 4: Nuit température de sommeil
+              - conditions:
+                  - condition: trigger
+                    id: "wd_h4"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input clim_entity
+                    data:
+                      temperature: 20.0
+                  - if: !input log_actions
+                    then:
+                      - service: logbook.log
+                        data:
+                          message: >
+                            Nuit - Température sommeil à {{ 20 }}°C
+                          name: "Clim Salon"
+
+      # === Week-end (Samedi = 6, Dimanche = 7) ===
+      - conditions:
+          - condition: template
+            value_template: "{{ now().isoweekday() >= 6 }}"
+        sequence:
+          - choose:
+              # Week-end Heure 1: Matin Confort
+              - conditions:
+                  - condition: trigger
+                    id: "we_h1"
+                sequence:
+                  - service: climate.set_hvac_mode
+                    target:
+                      entity_id: !input clim_entity
+                    data:
+                      hvac_mode: !input mode_clim
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input clim_entity
+                    data:
+                      temperature: 22.0
+                  - if: !input log_actions
+                    then:
+                      - service: logbook.log
+                        data:
+                          message: >
+                            Réveil Week-end - Température Confort à {{ 22 }}°C
+                          name: "Clim Salon"
+
+              # Week-end Heure 2: Éco Mi-journée
+              - conditions:
+                  - condition: trigger
+                    id: "we_h2"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input clim_entity
+                    data:
+                      temperature: 17.0
+                  - if: !input log_actions
+                    then:
+                      - service: logbook.log
+                        data:
+                          message: >
+                            Éco Week-end à {{ 17 }}°C
+                          name: "Clim Salon"
+
+              # Week-end Heure 3: Confort Après-midi
+              - conditions:
+                  - condition: trigger
+                    id: "we_h3"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input clim_entity
+                    data:
+                      temperature: 22.0
+                  - if: !input log_actions
+                    then:
+                      - service: logbook.log
+                        data:
+                          message: >
+                            Confort Week-end Après-midi à {{ 22 }}°C
+                          name: "Clim Salon"
+
+              # Week-end Heure 4: Nuit Week-end
+              - conditions:
+                  - condition: trigger
+                    id: "we_h4"
+                sequence:
+                  - service: climate.set_temperature
+                    target:
+                      entity_id: !input clim_entity
+                    data:
+                      temperature: 19.0
+                  - if: !input log_actions
+                    then:
+                      - service: logbook.log
+                        data:
+                          message: >
+                            Nuit Week-end - Température sommeil à {{ 19 }}°C
+                          name: "Clim Salon"
